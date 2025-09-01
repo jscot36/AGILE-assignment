@@ -17,7 +17,28 @@ struct Profile {
     vector<Availability> availability; 
 };
 
+//universal list of profiles to edit
 vector<Profile> profiles;
+
+//overload needed for comparison in editing profile
+bool operator==(const Availability& main, const Availability& other){
+    return (main.day == other.day) && (main.startHour == other.startHour) && (main.endHour == other.endHour);
+}
+
+//used to standardize inputs
+string normalizeName(string name) {
+    if (name.empty()) return name;
+
+    // Lowercase everything first
+    for (auto &ch : name) {
+        ch = tolower(ch);
+    }
+
+    // Capitalize first letter
+    name[0] = toupper(name[0]);
+    return name;
+}
+
 
 //checks if availabilities match via having same day and overlapping times
 bool overlaps(const Availability& a, const Availability& b) {
@@ -33,14 +54,15 @@ void createProfile() {
     int start, end;
 
     cout << "Enter your name: ";
-    getline(cin, prof.name);
+    getline(cin, userInput);
+    prof.name = normalizeName(userInput);
 
     cout << "Enter classes (type 'done' when finished):\n";
     while (true) {
         cout << "Class: ";
         getline(cin, userInput);
         if (userInput == "done") break;
-        prof.classes.push_back(userInput);
+        prof.classes.push_back(normalizeName(userInput));
     }
 
     cout << "Enter availability slots in format (Day StartHour EndHour). Type 'done' when finished.\n";
@@ -52,7 +74,8 @@ void createProfile() {
         getline(cin, userInput);
         if (userInput == "done") break;
 
-        avail.day = day;
+        sscanf(userInput.c_str(), "%s %d %d", day, &start, &end);
+        avail.day = normalizeName(day);
         avail.startHour = start;
         avail.endHour = end;
         prof.availability.push_back(avail);
@@ -69,7 +92,7 @@ void viewProfiles() {
         return;
     }
 
-    for (size_t i = 0; i < profiles.size(); i++) {
+    for (int i = 0; i < profiles.size(); i++) {
         cout << "--- Profile " << i+1 << " ---\n";
         cout << "Name: " << profiles[i].name << "\nClasses: ";
         for (string currClass : profiles[i].classes) cout << currClass << " ";
@@ -93,10 +116,11 @@ void findMatches() {
     bool sharedClass;
     int meetingOptions = 0;
     int choice;
+    int i,j;
 
-    for (size_t i = 0; i < profiles.size(); i++) {
+    for (i = 0; i < profiles.size(); i++) {
 
-        for (size_t j = i+1; j < profiles.size(); j++) {
+        for (j = i+1; j < profiles.size(); j++) {
             //Check for a shared class
             sharedClass = false;
             for (string currClass : profiles[i].classes) {
@@ -135,14 +159,137 @@ void findMatches() {
 
 }
 
-int main() {
+void editProfile() {
+    
+    string userInput;
     int choice;
+    int addOrDelete;
+    int start, end;
+    char day[10];
+    Profile currProfile;
+    Availability avail;
+    
+    
+    viewProfiles();
+    cout << "What profile would you like to edit? (type the profile name) \n";
+    getline(cin,userInput);
+
+    for (int i = 0; i < profiles.size(); i++) {
+
+        if (profiles[i].name == userInput){
+            currProfile = profiles[i];
+
+            cout << "What would you like to edit?\n";
+            cout << "1. Add/Remove Classes\n";
+            cout << "2. Add/Remove Availability\n";
+            cout << "3. Delete Profile\n";
+            cout << "4. Exit\n";
+            cin >> choice;
+            cin.ignore();
+
+            if (choice == 1){
+                cout << "Would you like to add or remove?\n";
+                cout << "1. Add\n";
+                cout << "2. Delete\n";
+                cin >> addOrDelete;
+                cin.ignore();
+
+                if (addOrDelete == 1) {
+                    cout << "Enter classes (type 'done' when finished):\n";
+                    
+                    while (true) {
+                        cout << "Class: ";
+                        getline(cin, userInput);
+                        if (userInput == "done") break;
+                        currProfile.classes.push_back(normalizeName(userInput));
+                    }
+                }
+
+                else if (addOrDelete == 2){
+                    cout << "What class would you like to remove?\n";
+                    getline(cin,userInput);
+
+                    for(int j = 0;  j < currProfile.classes.size(); j++){
+                        
+                        if (currProfile.classes[j] == userInput){
+                            currProfile.classes.erase(currProfile.classes.begin()+j);
+                        }
+
+                    }
+                }
+                profiles[i] = currProfile;
+            }
+            else if (choice == 2){
+
+                cout << "Would you like to add or remove?\n";
+                cout << "1. Add\n";
+                cout << "2. Delete\n";
+                cin >> addOrDelete;
+                cin.ignore();
+
+                if (addOrDelete == 1){
+
+                    cout << "Enter availability slots in format (Day StartHour EndHour). Type 'done' when finished.\n";
+                    cout << "Example: Mon 14 16 (for Monday 2PM-4PM)\n";
+
+                    //Availability loop
+                    while (true) {
+                        cout << "Availability: ";
+                        getline(cin, userInput);
+                        if (userInput == "done") break;
+                        
+                        sscanf(userInput.c_str(), "%s %d %d", day, &start, &end);
+                        avail.day = normalizeName(day);
+                        avail.startHour = start;
+                        avail.endHour = end;
+                        currProfile.availability.push_back(avail);
+                    }
+                
+                }
+
+                else if (addOrDelete == 2){
+                    cout << "What time would you like to remove?\n";
+                    cout << "Input it as: Mon 14 16\n";
+                    getline(cin,userInput);
+                    sscanf(userInput.c_str(), "%s %d %d", day, &start, &end);
+                    avail.day = day;
+                    avail.startHour = start;
+                    avail.endHour = end;
+
+                    for(int j = 0;  j < currProfile.availability.size(); j++){
+                        
+                        if (currProfile.availability[j] == avail){
+                            currProfile.availability.erase(currProfile.availability.begin()+j);
+                        }
+
+                    }
+                }
+                 profiles[i] = currProfile;           
+            }
+            
+            else if (choice == 3){
+                profiles.erase(profiles.begin()+i);
+            }
+            break;
+        }
+
+
+    }
+
+
+}
+
+int main() {
+    
+    int choice;
+
     while (true) {
         cout << "===== Study Buddy App =====\n";
         cout << "1. Create Profile\n";
         cout << "2. View Profiles\n";
         cout << "3. Find Matches\n";
-        cout << "4. Exit\n";
+        cout << "4. Edit Profile\n";
+        cout << "5. Exit\n";
         cout << "Enter choice (pick a number): ";
         cin >> choice;
         cin.ignore();
@@ -151,7 +298,8 @@ int main() {
             case 1: createProfile(); break;
             case 2: viewProfiles(); break;
             case 3: findMatches(); break;
-            case 4: cout << "Goodbye!\n"; return 0;
+            case 4: editProfile(); break;
+            case 5: cout << "Goodbye!\n"; return 0;
             default: cout << "Invalid choice. Try again.\n";
         }
     }
